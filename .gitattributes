@@ -1,0 +1,12 @@
+* text=auto
+
+# The verification scripts must keep LF. On a Windows checkout with core.autocrlf=true
+# a CRLF shebang line fails to execute, which breaks the reproduce-it-yourself claim.
+*.sh text eol=lf
+*.py text eol=lf
+*.patch text eol=lf
+
+*.wasm binary
+*.dat binary
+*.png binary
+*.svg text eol=lf
