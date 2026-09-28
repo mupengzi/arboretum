@@ -1,0 +1,9 @@
+[package]
+name = "arbpricing"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Deterministic on-chain derivatives pricing: Black-Scholes, Greeks, CRR binomial trees, implied volatility."
+
+[dependencies]
+arbnum = { path = "../arbnum" }

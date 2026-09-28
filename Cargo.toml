@@ -1,0 +1,18 @@
+[workspace]
+resolver = "2"
+members = ["crates/arbnum", "crates/arbpricing", "crates/arbreport", "crates/arbwasm"]
+# The contract is built for wasm32-unknown-unknown only, and linking it for the host
+# fails by design: it is a standalone crate so that `cargo test` at the root stays green
+# and so its build artifacts stay separate from the host crates.
+exclude = ["crates/arbcontract"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"

@@ -1,0 +1,8 @@
+[package]
+name = "arbnum"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Deterministic 1e9 fixed-point numerics (sqrt/exp/ln/pow/erf/normal CDF) for on-chain pricing. No floating point."
+
+[dependencies]

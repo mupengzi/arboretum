@@ -1,0 +1,13 @@
+[package]
+name = "arbwasm"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Size probe: the pricing kernel compiled to wasm32-unknown-unknown, measured against Stylus's code-size limit"
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+arbnum = { path = "../arbnum" }
+arbpricing = { path = "../arbpricing" }

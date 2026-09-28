@@ -1,0 +1,32 @@
+[package]
+name = "arbcontract"
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+description = "Arboretum: the Stylus contract. Deterministic derivatives pricing as an on-chain primitive."
+
+[lib]
+crate-type = ["lib", "cdylib"]
+
+[dependencies]
+stylus-sdk = "0.10.9"
+alloy-primitives = "1.5.7"
+arbnum = { path = "../arbnum" }
+arbpricing = { path = "../arbpricing" }
+
+[features]
+export-abi = ["stylus-sdk/export-abi"]
+# Declared, not used: the stylus-sdk macros emit `cfg` checks against this name, and
+# without it every generated item warns. The official examples declare it too.
+contract-client-gen = []
+
+# Its own workspace root: the contract targets wasm32-unknown-unknown only, and it cannot
+# inherit the host crates' profile. These settings are what make the compressed size what
+# it is -- without them the artifact is roughly a third larger.
+[workspace]
+
+[profile.release]
+opt-level = "z"
+lto = true
+codegen-units = 1
+panic = "abort"
