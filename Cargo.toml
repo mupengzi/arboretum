@@ -4,7 +4,7 @@ members = ["crates/arbnum", "crates/arbpricing", "crates/arbreport", "crates/arb
 # The contract is built for wasm32-unknown-unknown only, and linking it for the host
 # fails by design: it is a standalone crate so that `cargo test` at the root stays green
 # and so its build artifacts stay separate from the host crates.
-exclude = ["crates/arbcontract"]
+exclude = ["crates/arbcontract", "tools/cargo-stylus-src"]
 
 [workspace.package]
 version = "0.1.0"

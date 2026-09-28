@@ -25,7 +25,8 @@ from taking it seriously.
    math library, loops priced per iteration, and a stack discipline that fights recursion.
    Rust compiled to WASM through Stylus is where loop-heavy integer arithmetic becomes
    cheap — Arbitrum's own gas-optimisation documentation puts loop-heavy computation at
-   roughly 50–100× cheaper than the EVM equivalent.
+   roughly 50–100× cheaper than the EVM equivalent
+   (<https://docs.arbitrum.io/stylus/best-practices/gas-optimization>).
 2. **Toolchain.** Before Stylus there was no credible path for this class of numerics on
    an EVM chain.
 3. **Demand.** There was no meaningful pool of tokenised equities to price derivatives on.

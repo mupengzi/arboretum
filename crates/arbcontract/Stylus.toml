@@ -1,0 +1,13 @@
+# Workspace-level Stylus manifest. cargo-stylus loads this from the workspace root, which
+# for this crate is the crate itself (it carries its own [workspace] table so the wasm
+# build stays out of the host crates' way).
+#
+# Named networks here are what let `cargo stylus deploy --network arbitrum-sepolia` work
+# instead of passing an endpoint by hand. After a successful deploy the CLI writes the
+# resulting address back into a [contract.deployments.*] section of this file.
+
+[workspace.networks.arbitrum-sepolia]
+endpoint = "https://sepolia-rollup.arbitrum.io/rpc"
+
+[workspace.networks.arbitrum-one]
+endpoint = "https://arb1.arbitrum.io/rpc"

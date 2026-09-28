@@ -1,2 +1,6 @@
 target/
 *.br
+tools/
+evm/out/
+evm/cache/
+evm/lib/

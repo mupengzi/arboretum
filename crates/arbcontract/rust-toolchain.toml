@@ -1,0 +1,4 @@
+# Required by cargo-stylus: verification has to be reproducible, so the channel must be a
+# pinned version rather than "stable". This is the toolchain already installed here.
+[toolchain]
+channel = "1.97.1"

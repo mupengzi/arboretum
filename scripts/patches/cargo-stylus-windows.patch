@@ -1,0 +1,79 @@
+--- cargo-stylus-0.10.9/src/commands/debug_hook.rs	2006-07-24 09:21:28.000000000 +0800
++++ src/commands/debug_hook.rs	2026-09-28 12:08:32.418549900 +0800
+@@ -7,11 +7,14 @@
+ //! cross-contract context switching. Some methods are scaffolded for future
+ //! Solidity interop debugging support.
+ 
++use std::sync::Arc;
++
++// Only the stylusdb socket hook below needs these, and it is Unix-only.
++#[cfg(unix)]
+ use std::{
+     io::Write,
+     os::unix::net::{UnixListener, UnixStream},
+     path::Path,
+-    sync::Arc,
+ };
+ 
+ use eyre::Result;
+@@ -53,11 +56,17 @@
+ /// This implementation uses Unix sockets and Unix-specific paths (/tmp/).
+ /// Windows support would require either Windows Subsystem for Linux (WSL)
+ /// or a platform-specific implementation using named pipes.
++///
++/// `#[cfg(unix)]` note: upstream imports `std::os::unix::net` unconditionally, which makes
++/// the whole CLI fail to build on Windows even though nothing outside `replay --debugger
++/// stylusdb` uses this type. Gating it here is the entire portability patch.
++#[cfg(unix)]
+ pub struct StylusDebuggerHook {
+     socket_path: String,
+     connection: Arc<Mutex<Option<UnixStream>>>,
+ }
+ 
++#[cfg(unix)]
+ impl StylusDebuggerHook {
+     pub fn new() -> Result<Self> {
+         // Note: Unix-specific path format; not supported on Windows without WSL
+@@ -106,6 +115,7 @@
+     }
+ }
+ 
++#[cfg(unix)]
+ impl DebuggerHook for StylusDebuggerHook {
+     fn on_external_call(&self, contract_address: &str) {
+         self.send_command(&format!("switch_context {contract_address}"));
+@@ -128,6 +138,7 @@
+     }
+ }
+ 
++#[cfg(unix)]
+ impl Drop for StylusDebuggerHook {
+     fn drop(&mut self) {
+         // Clean up socket file
+--- cargo-stylus-0.10.9/src/commands/replay.rs	2006-07-24 09:21:28.000000000 +0800
++++ src/commands/replay.rs	2026-09-28 12:08:50.771349000 +0800
+@@ -583,10 +583,14 @@
+         }
+     }
+ 
+-    // Initialize debugger hook if using stylusdb
+-    if args.debugger == "stylusdb" && !registry.contracts.is_empty() {
++    // Initialize debugger hook if using stylusdb. Unix-only, because the hook is a Unix
++    // socket: on Windows this is compiled out, and there is no debugger to attach to.
++    #[cfg(unix)]
++    {
+         use crate::commands::debug_hook::{self, DebuggerHook};
+ 
++        if args.debugger == "stylusdb" && !registry.contracts.is_empty() {
++
+         let hook = debug_hook::StylusDebuggerHook::new()?;
+ 
+         // Send all contract mappings to debugger
+@@ -606,6 +610,7 @@
+         }
+ 
+         debug_hook::init_debugger_hook(Arc::new(hook));
++        }
+     }
+ 
+     unsafe {
