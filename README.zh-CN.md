@@ -21,7 +21,7 @@
 | `arbwasm` — 体积探针，用来归因 SDK 自身占了多少 | 完成，压缩后 14.6 KB |
 | 测试网部署 | **已在 Arbitrum Sepolia 上线**，`0x374f469725d735115b8b15dee3f8749ff929d94a` |
 | `web/` — 演示页面 | **已上线** <https://arboretum-pricing-vkk9ilpssgw.qoder.zone> |
-| 演示视频 | **已录制**，随本次提交发布在 HackQuest 参赛页上；录制清单见 [`docs/VIDEO.md`](docs/VIDEO.md)（英文） |
+| 演示视频 | **已录制**，在本次参赛页上 |
 | 蒙特卡洛定价 | **有意不做**。在没有跳跃模型或随机波动率模型的前提下，模拟几何布朗运动只会用更慢的速度复现闭式解。等到出现需要它的收益结构时再做，现在没有。 |
 
 `cargo test` 全绿。`docs/ACCURACY.md` 由 `cargo run -p arbreport` 生成，不是手写的，所以下面的数字不会和代码脱节。
