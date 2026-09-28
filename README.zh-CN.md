@@ -39,6 +39,18 @@
 
 ## 用法
 
+需要装什么，以及每样是用来做什么的：
+
+| | |
+|---|---|
+| Rust 1.97.1 | 合约锁定的工具链版本，写在 `crates/arbcontract/rust-toolchain.toml`。宿主测试任何较新的 stable 都能跑 |
+| `rustup target add wasm32-unknown-unknown` | 构建合约 |
+| `cargo install wasm-tools` | `verify_no_floats.sh` 用它反汇编产物 |
+| Foundry（提供 `cast`） | `verify_onchain.sh` 用它调用已部署合约 |
+| `brotli` | `size.sh` 用它。没装就跳过 brotli 那两列，不会拿估算值凑 |
+| Python 3 | 重新生成参考向量 |
+| Node | 只有 `web/` 需要。这里用的是 24.x |
+
 ```bash
 cargo test                          # 宿主 crate 共 36 个测试
 cargo clippy --all-targets          # 无警告
@@ -146,6 +158,48 @@ all cases agree: the deployed contract and this host build are bit-identical
 [`docs/DEPLOY.md`](docs/DEPLOY.md) 里，包括官方 CLI 为了能在 Windows 上编译所必需的那个单文件补丁。
 
 `scripts/verify_no_floats.sh` 校验编译出的模块并把它反汇编：WebAssembly 里每一个浮点类型的值在文本形式里都会写成 `f32` 或 `f64`，所以"没有浮点"这个说法是对着产物检查出来的，不是对着源码声明出来的。
+
+### 验证脚本会打印什么
+
+两个脚本都可以在刚 clone 下来的目录里直接跑。它们各自会先把需要的东西构建出来，都不写入任何文件，失败时以非零码退出。
+
+```
+$ scripts/verify_no_floats.sh
+module:   crates/arbcontract/target/wasm32-unknown-unknown/release/arbcontract.wasm
+size:     71160 bytes
+validate: ok
+float-typed mentions: 0
+PASS: no floating point anywhere in the module
+```
+
+那行 `size` 是唯一能把合约和共用同一个输出路径的 368 字节构造函数探针区分开来的东西，所以脚本还会拒绝任何没有导出 `user_entrypoint` 的模块。
+
+```
+$ scripts/verify_onchain.sh
+contract 0x374f469725d735115b8b15dee3f8749ff929d94a
+rpc      https://sepolia-rollup.arbitrum.io/rpc
+
+PASS  priceEuropean_call           23843783735
+PASS  priceEuropean_put            11486675235
+PASS  priceLattice_euro_call_512   23850367550
+PASS  priceLattice_amer_put_512    11622510326
+PASS  delta_call                   645635629
+PASS  vega_call                    46315037533
+PASS  noiseBand                    38911
+PASS  lowerBound_call              12357108500
+PASS  upperBound_call              249375780500
+PASS  impliedVol_from_23.8         349054514
+
+all cases agree: the deployed contract and this host build are bit-identical
+```
+
+这是一次本机构建对十个已部署地址上的 `eth_call`，比的是整数，所以没有容差可以争。如果官方 RPC 在你的网络上不响应，把脚本指到一个能用的：
+
+```bash
+ARBORETUM_RPC=https://arbitrum-sepolia.drpc.org scripts/verify_onchain.sh
+```
+
+`ARBORETUM_ADDRESS` 用同样的方式覆盖合约地址。
 
 ## 已知限制
 

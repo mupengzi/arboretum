@@ -53,6 +53,18 @@ with a market maker.
 
 ## Usage
 
+What you need, and what each part is for:
+
+| | |
+|---|---|
+| Rust 1.97.1 | the pinned contract toolchain, in `crates/arbcontract/rust-toolchain.toml`. The host tests run on any recent stable |
+| `rustup target add wasm32-unknown-unknown` | building the contract |
+| `cargo install wasm-tools` | `verify_no_floats.sh`, which disassembles the artifact |
+| Foundry, for `cast` | `verify_onchain.sh`, which calls the deployed contract |
+| `brotli` | `size.sh`. Without it the brotli columns are skipped, not estimated |
+| Python 3 | regenerating the reference vectors |
+| Node | `web/` only. Built here on 24.x |
+
 ```bash
 cargo test                          # 36 tests across the host crates
 cargo clippy --all-targets          # clean
@@ -199,6 +211,53 @@ build on Windows at all.
 `scripts/verify_no_floats.sh` validates the compiled module and disassembles it: every
 float-typed value in WebAssembly spells `f32` or `f64` in the text form, so the "no
 floating point" claim is checked against the artifact rather than asserted from the source.
+
+### What the verification scripts print
+
+Both are safe to run on a fresh clone. Each builds what it needs, neither writes anything,
+and both exit non-zero on failure.
+
+```
+$ scripts/verify_no_floats.sh
+module:   crates/arbcontract/target/wasm32-unknown-unknown/release/arbcontract.wasm
+size:     71160 bytes
+validate: ok
+float-typed mentions: 0
+PASS: no floating point anywhere in the module
+```
+
+The `size` line is the only thing that distinguishes the contract from the 368-byte
+constructor probe that shares its output path, so the script also refuses any module that
+does not export `user_entrypoint`.
+
+```
+$ scripts/verify_onchain.sh
+contract 0x374f469725d735115b8b15dee3f8749ff929d94a
+rpc      https://sepolia-rollup.arbitrum.io/rpc
+
+PASS  priceEuropean_call           23843783735
+PASS  priceEuropean_put            11486675235
+PASS  priceLattice_euro_call_512   23850367550
+PASS  priceLattice_amer_put_512    11622510326
+PASS  delta_call                   645635629
+PASS  vega_call                    46315037533
+PASS  noiseBand                    38911
+PASS  lowerBound_call              12357108500
+PASS  upperBound_call              249375780500
+PASS  impliedVol_from_23.8         349054514
+
+all cases agree: the deployed contract and this host build are bit-identical
+```
+
+That is one local build against ten `eth_call`s on the deployed address, comparing integers,
+so there is no tolerance to argue about. If the official RPC does not answer from your
+network, point the script at one that does:
+
+```bash
+ARBORETUM_RPC=https://arbitrum-sepolia.drpc.org scripts/verify_onchain.sh
+```
+
+`ARBORETUM_ADDRESS` overrides the contract the same way.
 
 ## Known limitations
 
