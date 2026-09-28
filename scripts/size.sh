@@ -11,8 +11,17 @@ cargo build --release --target wasm32-unknown-unknown -p arbwasm
 probe=target/wasm32-unknown-unknown/release/arbwasm.wasm
 
 echo "building the contract ..."
-(cd crates/arbcontract && cargo build --release --target wasm32-unknown-unknown)
+# The lib and the bin in this package share an output filename, and the bin is a 368-byte
+# host-side constructor probe. Building both leaves whichever finished last at that path,
+# so the lib target has to be asked for by name.
+(cd crates/arbcontract && cargo build --release --target wasm32-unknown-unknown --lib)
 contract=crates/arbcontract/target/wasm32-unknown-unknown/release/arbcontract.wasm
+
+if [ -f "$contract" ] && [ "$(wc -c < "$contract")" -lt 10000 ]; then
+  echo "FAIL: $contract is $(wc -c < "$contract") bytes. That is the constructor probe, not" >&2
+  echo "      the contract, so every size below would be meaningless." >&2
+  exit 1
+fi
 
 kb() { awk -v b="$1" 'BEGIN { printf "%.1f KB", b / 1024 }'; }
 

@@ -8,9 +8,15 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-WASM=${1:-crates/arbcontract/target/wasm32-unknown-unknown/release/arbcontract.wasm}
+WASM=${1:-}
+if [ -z "$WASM" ]; then
+  # Ask for the lib target by name: the bin in this package is a 368-byte constructor
+  # probe that shares its output filename, and whichever build finished last owns the path.
+  (cd crates/arbcontract && cargo build --release --target wasm32-unknown-unknown --lib)
+  WASM=crates/arbcontract/target/wasm32-unknown-unknown/release/arbcontract.wasm
+fi
 if [ ! -f "$WASM" ]; then
-  echo "not built yet: (cd crates/arbcontract && cargo build --release --target wasm32-unknown-unknown)" >&2
+  echo "not built yet: (cd crates/arbcontract && cargo build --release --target wasm32-unknown-unknown --lib)" >&2
   exit 1
 fi
 if ! command -v wasm-tools >/dev/null 2>&1; then
@@ -19,11 +25,19 @@ if ! command -v wasm-tools >/dev/null 2>&1; then
 fi
 
 echo "module:   $WASM"
+echo "size:     $(wc -c < "$WASM") bytes"
 echo "validate: $(wasm-tools validate "$WASM" && echo ok)"
 
 wat=$(mktemp)
 trap 'rm -f "$wat"' EXIT
 wasm-tools print "$WASM" > "$wat"
+
+# A module with no user_entrypoint export is not a deployed Stylus contract, and checking
+# floats in it would prove nothing about the one that is.
+if ! grep -q '(export "user_entrypoint"' "$wat"; then
+  echo "FAIL: $WASM does not export user_entrypoint, so it is not the contract program" >&2
+  exit 1
+fi
 
 hits=$(grep -cE '\b(f32|f64)\b' "$wat" || true)
 echo "float-typed mentions: $hits"

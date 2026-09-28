@@ -6,7 +6,7 @@
 address            0x374f469725d735115b8b15dee3f8749ff929d94a
 deploy tx          0xeae8c5dd5bc09d8b3d866ad7eaedd86fd827d418a63c894b63245a39dd5ee037
 activation tx      a562c36deb7fd9eebc64e60cfc0ed2e29c1b22c5e46a4c38d851c8080e97d7be
-contract size      14.8 KB (14668 bytes) against a 96 KB limit
+contract size      14.7 KB (14668 bytes) against a 96 KB limit
 wasm data fee      0.000108 ETH
 ```
 
