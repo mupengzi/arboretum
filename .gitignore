@@ -6,5 +6,6 @@ evm/cache/
 evm/lib/
 web/node_modules/
 web/.next/
+web/out/
 web/next-env.d.ts
-web/tsconfig.tsbuildinfoweb/out/
+web/tsconfig.tsbuildinfo
