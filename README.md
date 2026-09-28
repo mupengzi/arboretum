@@ -18,9 +18,9 @@ Entry for **Arbitrum Open House Singapore — Online Buildathon**.
 | `arbnum` — fixed-point numerics | **done**, 15 tests |
 | `arbpricing` — Black-Scholes, Greeks, CRR lattice, implied vol | **done**, 20 tests |
 | `arbreport` — accuracy harness against Python references | **done**, 3336 cases, 0 over budget |
-| `arbcontract` — the Stylus contract | **builds**, 18.6 KB compressed |
+| `arbcontract` — the Stylus contract | **deployed**, 14,668 bytes compressed |
 | `arbwasm` — size probe for the attribute attribution | done, 14.8 KB compressed |
-| testnet deployment | **not yet** — needs a funded key |
+| testnet deployment | **live on Arbitrum Sepolia**, `0x374f469725d735115b8b15dee3f8749ff929d94a` |
 | Frontend + demo video | **not yet** |
 | Monte Carlo pricing | **deliberately out of scope** — without a jump or stochastic-volatility model, simulating geometric Brownian motion only reproduces the closed form more slowly. It earns its place when there is a payoff that needs it; there is not one yet. |
 
@@ -136,14 +136,29 @@ pre-Elara limit too, which means the engine is deployable on chains that have no
 that upgrade.
 
 ```
-$ cargo stylus check --endpoint https://sepolia-rollup.arbitrum.io/rpc
-contract size: 14.8 KB (14825 bytes)
+$ cargo stylus deploy -e https://sepolia-rollup.arbitrum.io/rpc --no-verify...
+contract size: 14.7 KB (14668 bytes)
 wasm data fee: 0.000108 ETH (originally 0.000090 ETH with 20% bump)
+deployed code at address: 0x374f469725d735115b8b15dee3f8749ff929d94a
+successfully activated contract 0x374f469725d735115b8b15dee3f8749ff929d94a
 ```
 
-No errors, so the contract is deployable on Arbitrum Sepolia as it stands. It has not been
-deployed yet — that needs a funded key. See [`docs/DEPLOY.md`](docs/DEPLOY.md), which also
-documents the one-file patch the official CLI needs to build on Windows at all.
+**The deployed contract and a local build of this source agree bit for bit.**
+
+```
+$ scripts/verify_onchain.sh
+PASS  priceEuropean_call           23843783735
+PASS  priceLattice_amer_put_512    11622510326
+PASS  impliedVol_from_23.8         349054514
+...
+all cases agree: the deployed contract and this host build are bit-identical
+```
+
+That is the thesis of the project stated as a command anyone can run: not "trust the
+number", but "run the program and get the same number". Deploying it needs a funded key and
+six separate pieces of tooling configuration, all documented in
+[`docs/DEPLOY.md`](docs/DEPLOY.md) — including the one-file patch the official CLI needs to
+build on Windows at all.
 
 `scripts/verify_no_floats.sh` validates the compiled module and disassembles it: every
 float-typed value in WebAssembly spells `f32` or `f64` in the text form, so the "no

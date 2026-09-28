@@ -19,7 +19,7 @@ use alloc::vec::Vec;
 use arbnum::D;
 use arbpricing::{
     binomial, bounds, european, greeks, implied_vol, price_noise_band, Kind, Market,
-    MAX_LATTICE_STEPS,
+    MAX_LATTICE_STEPS, PLACEHOLDER_SIGMA_RAW,
 };
 use stylus_sdk::prelude::*;
 
@@ -123,6 +123,10 @@ impl Arboretum {
 
     /// Invert a quoted price for volatility. Reverts with `domain` when the quote sits
     /// outside the no-arbitrage band, because no volatility reproduces it.
+    ///
+    /// The answer depends only on the quote and the market parameters: the solver brackets
+    /// the solution rather than starting from a guess, so two callers cannot get two
+    /// different volatilities for the same quote.
     pub fn implied_vol(
         &self,
         price: i128,
@@ -133,8 +137,7 @@ impl Arboretum {
         carry: i128,
         is_put: bool,
     ) -> Result<i128, Vec<u8>> {
-        // The market's sigma field is only the solver's starting guess here.
-        let m = market(spot, strike, t, 500_000_000, rate, carry);
+        let m = market(spot, strike, t, PLACEHOLDER_SIGMA_RAW, rate, carry);
         implied_vol(D::from_raw(price), m, kind(is_put))
             .map(|v| v.raw())
             .map_err(reason)

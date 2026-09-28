@@ -1,27 +1,28 @@
 # Deploying
 
-The contract builds, validates and measures on this machine, and has been checked against
-Arbitrum Sepolia with the official tooling. Two things needed fixing along the way, and
-both of them will be waiting for anyone else who tries this on Windows.
-
-## Verified state
+**Deployed and verified on Arbitrum Sepolia.**
 
 ```
-cargo stylus check --endpoint https://sepolia-rollup.arbitrum.io/rpc
-
-contract size: 14.8 KB (14825 bytes)
-wasm data fee: 0.000108 ETH (originally 0.000090 ETH with 20% bump)
+address            0x374f469725d735115b8b15dee3f8749ff929d94a
+deploy tx          0xeae8c5dd5bc09d8b3d866ad7eaedd86fd827d418a63c894b63245a39dd5ee037
+activation tx      a562c36deb7fd9eebc64e60cfc0ed2e29c1b22c5e46a4c38d851c8080e97d7be
+contract size      14.8 KB (14668 bytes) against a 96 KB limit
+wasm data fee      0.000108 ETH
 ```
 
-No errors. Compressed size against a 96 KB limit (24 KB before ArbOS Elara), so the
-contract is deployable on Sepolia as it stands. The fee is the data cost of the
-deployment itself, not including activation gas.
+`scripts/verify_onchain.sh` calls every entry point on that address and compares each result
+against a local build of the same source. All ten cases agree **bit for bit** — which is the
+entire claim of the project, stated as a command anyone can run:
 
-Note the official number is *smaller* than `scripts/size.sh` reports (18.6 KB): the CLI
-runs `wasm-opt` before compressing, and reports the optimized size. Treat 14,825 bytes as
-the authoritative figure and the script's number as the conservative one.
+```
+all cases agree: the deployed contract and this host build are bit-identical
+```
 
-## Three things the CLI requires, in the order it asks for them
+Reproduce it with `ARBORETUM_ADDRESS=0x374f... scripts/verify_onchain.sh`.
+
+## Six things the tooling requires, in the order it asks for them
+
+The list is long and every item cost time to find, so it is written down in full.
 
 **1. `cargo install cargo-stylus` does not build on Windows.**
 
@@ -76,9 +77,9 @@ deployer_address = "0x..."
 
 `arbcontract` is its own workspace root, so it needs the **workspace** form —
 `crates/arbcontract/Stylus.toml`. A `[contract]` table in that file makes the parse fail
-with `missing field 'networks'`, because it is being read as the other schema. (Note that
-the named networks have to be *present* to satisfy the schema, but 0.10.9's `check` and
-`deploy` do not actually read them — see the flag note below.)
+with `missing field 'networks'`, because it is being read as the other schema. The named
+networks have to be *present* to satisfy the schema, but 0.10.9's `check` and `deploy` do
+not read them.
 
 **3. `rust-toolchain.toml` with a pinned channel.**
 
@@ -88,37 +89,68 @@ e.g., '1.80.0' ... it cannot be a generic channel like 'stable'
 ```
 
 Verification has to be reproducible, so `crates/arbcontract/rust-toolchain.toml` pins
-`1.97.1`. A generic `stable` is rejected.
+`1.97.1`.
 
-**4. `check` needs an endpoint to complete.** Without one it tries `http://localhost:8547`
-(the local devnode) and dies with a connection refused. `--endpoint` against a public RPC
-is enough and needs no key:
+**4. The pinned toolchain needs the wasm target separately.**
 
-```bash
-cargo stylus check --endpoint https://sepolia-rollup.arbitrum.io/rpc
+rustup treats `1.97.1` as a different toolchain from `stable` even when they are the same
+version, and it installs a fresh copy without any targets. The first deploy appeared to
+work because the build was cached; the first source change surfaced it:
+
+```
+error[E0463]: can't find crate for `std`
+  = note: the `wasm32-unknown-unknown` target may not be installed
 ```
 
-## Deploying
+```bash
+rustup target add wasm32-unknown-unknown --toolchain 1.97.1
+```
+
+**5. Deployment needs a bin target for the constructor probe, and a gas ceiling.**
+
+`deploy` runs the crate with `export-abi` to read the constructor signature, which needs a
+bin target — hence `crates/arbcontract/src/main.rs`. And the default fee estimate can land
+under the base fee on Sepolia:
+
+```
+max fee per gas less than block base fee: maxFeePerGas: 31828000 baseFee: 32042000
+```
+
+`--max-fee-per-gas-gwei 1` fixes it and still costs a fraction of a cent.
+
+**6. Reproducible builds need WSL on Windows.**
+
+```
+error: Reproducible cargo stylus commands on Windows are only supported in Windows Linux
+Subsystem (WSL). Please install within WSL. To instead opt out of reproducible builds, add
+the --no-verify flag to your commands.
+```
+
+The deployment above used `--no-verify`, which deploys the locally built WASM and skips the
+Docker-based reproducible build. The consequence is honest and worth stating: the on-chain
+codehash cannot be re-derived through `cargo stylus verify` afterwards. The artifact is
+still fully public — the source, `Cargo.lock` and the toolchain are all pinned — but
+reproducing it requires a Linux environment. Running the deploy inside WSL removes this
+caveat.
+
+So the full command that worked:
 
 ```bash
 export PATH="$PWD/tools/cargo-stylus/bin:$PATH"
 cd crates/arbcontract
-cargo stylus deploy -e https://sepolia-rollup.arbitrum.io/rpc --private-key "$ARB_DEPLOYER_KEY"
+cargo stylus deploy \
+  -e https://sepolia-rollup.arbitrum.io/rpc \
+  --private-key "$ARB_DEPLOYER_KEY" \
+  --no-verify --max-fee-per-gas-gwei 1
 ```
 
-`deploy` builds, checks, deploys and activates in one go, then writes the resulting address
-into `Stylus.toml`.
+`deploy` builds, checks, deploys and activates in one go. `check` and `deploy` take
+`-e/--endpoint`; neither accepts `--network` in 0.10.9. `--estimate-gas` prices a
+deployment without broadcasting it.
 
-A note on the flag, because it is easy to guess wrong: `deploy` and `check` take
-`-e/--endpoint`, and in 0.10.9 neither accepts `--network`. The named networks in
-`Stylus.toml` are required by the manifest schema but these two commands do not read them,
-so the endpoint has to be passed explicitly. `--estimate-gas` will price the deployment
-without broadcasting it.
-
-**Keys.** Pass the key through an environment variable as above and never commit it. Use a
-throwaway deployer account holding only testnet ETH. Faucets for Arbitrum Sepolia are in
-the Buildathon resources tab: `arbitrum.faucet.dev` for ETH, `faucet.circle.com` for
-testnet USDC.
+**Keys.** Pass the key through an environment variable and never commit it. Use a throwaway
+account holding only testnet ETH. Faucets: `arbitrum.faucet.dev` for ETH,
+`faucet.circle.com` for testnet USDC.
 
 ## After it is deployed
 
@@ -131,8 +163,17 @@ cast call <ADDRESS> \
   --rpc-url https://sepolia-rollup.arbitrum.io/rpc
 ```
 
-`scale()` returns 1000000000, and the price call returns the fixed-point value of
-Black-Scholes for 250 spot, 240 strike, a quarter year, 35% vol, 5% rate, 1% carry.
+`scale()` returns 1000000000, and the price call returns 23843783735 — 23.843783735, which
+is what a local build of the same source produces.
+
+The CLI also recommends caching the program in ArbOS, which makes calls cheaper:
+
+```bash
+cargo stylus cache bid 0x374f469725d735115b8b15dee3f8749ff929d94a 0
+```
+
+Not done here, because it is another transaction and the cost of calls is not yet the
+constraint.
 
 **Two maintenance facts that bite people:**
 
@@ -145,7 +186,6 @@ Black-Scholes for 250 spot, 240 strike, a quarter year, 35% vol, 5% rate, 1% car
 
 ## What is still missing
 
-The frontend and the demo video, both of which want a deployed address. The honest order
-is: deploy, then build the page that reads a real feed and quotes on-chain, then record it.
-`evm/` already holds the Solidity side of that story — a consumer contract and its tests —
-so the page has something real to call.
+The frontend and the demo video. `evm/` already holds the Solidity side of that story — a
+consumer contract and its tests — and `scripts/verify_onchain.sh` holds the verification
+demo, so a page has something real to call and something real to show.

@@ -2,9 +2,10 @@
 # for this crate is the crate itself (it carries its own [workspace] table so the wasm
 # build stays out of the host crates' way).
 #
-# Named networks here are what let `cargo stylus deploy --network arbitrum-sepolia` work
-# instead of passing an endpoint by hand. After a successful deploy the CLI writes the
-# resulting address back into a [contract.deployments.*] section of this file.
+# The schema requires a networks table, so it is here — but note that 0.10.9's `check` and
+# `deploy` do not actually read it; they take -e/--endpoint. A [contract.deployments.*]
+# section is the other, incompatible schema and is written by the CLI for contract-level
+# records; putting it in this file breaks the parse.
 
 [workspace.networks.arbitrum-sepolia]
 endpoint = "https://sepolia-rollup.arbitrum.io/rpc"
