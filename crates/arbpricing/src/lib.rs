@@ -311,23 +311,34 @@ pub fn binomial(m: &Market, kind: Kind, steps: usize, american: bool) -> Result<
 /// Maximum iterations before the solver gives up.
 pub const MAX_IV_STEPS: usize = 80;
 
-/// Stop when the model price matches to within four quanta of the quote currency.
-pub const IV_PRICE_TOLERANCE_RAW: i128 = 4;
-/// ...or when the volatility bracket is this tight, whichever comes first.
+/// Stop when the volatility bracket is this narrow: 1e-7 of volatility.
 ///
-/// The second test is not a convenience: `sigma` itself only resolves to 1e-9, so the
-/// achievable price granularity near the solution is about `vega * 1e-9`, which for a
-/// typical equity option is ten times coarser than the price tolerance alone. Requiring
-/// the price test by itself would report a perfectly good quote as unconverged.
+/// One termination rule, not two. An earlier version also stopped as soon as the price
+/// residual fell inside the quote's noise band, which made the answer depend on the
+/// starting guess — the solver would halt at whichever iterate it happened to reach first.
+/// Two callers with different guesses got answers 8 quanta apart, both legitimate, which is
+/// exactly the property this project exists to avoid: implied volatility has to be a
+/// function of the quote and the parameters, nothing else.
 pub const IV_SIGMA_TOLERANCE_RAW: i128 = 100;
+
+/// Lower end of the volatility bracket: 1e-5.
+pub const IV_BRACKET_LO_RAW: i128 = 10_000;
+/// Upper end of the volatility bracket: 500%.
+pub const IV_BRACKET_HI_RAW: i128 = 5 * SCALE;
+
+/// A valid value for [`Market::sigma`] for callers that only want implied volatility.
+///
+/// `implied_vol` brackets the solution instead of starting from a guess, so the field is
+/// ignored; something has to occupy it because the market struct carries it.
+pub const PLACEHOLDER_SIGMA_RAW: i128 = 500_000_000;
 
 /// Invert the Black-Scholes price for volatility.
 ///
-/// Safeguarded Newton: the analytic correction uses `vega`, but the bracket is tightened
-/// on every iteration, so a poor initial guess or a near-flat vega close to expiry falls
-/// back to bisection instead of diverging.
+/// Plain bisection on a fixed bracket. No Newton step and no starting guess, because both
+/// would make the answer depend on the path taken rather than only on the quote: the
+/// returned volatility is `f(price, spot, strike, t, rate, carry, kind)` and nothing else.
 ///
-/// `market.sigma` is used only as the starting guess.
+/// `market.sigma` is ignored; see [`PLACEHOLDER_SIGMA_RAW`].
 pub fn implied_vol(price: D, market: Market, kind: Kind) -> Result<D> {
     if price.is_negative() {
         return Err(NumError::Domain);
@@ -338,35 +349,20 @@ pub fn implied_vol(price: D, market: Market, kind: Kind) -> Result<D> {
         // Outside the no-arbitrage band there is no volatility that reproduces the quote.
         return Err(NumError::Domain);
     }
+    let mut lo = D::from_raw(IV_BRACKET_LO_RAW);
+    let mut hi = D::from_raw(IV_BRACKET_HI_RAW);
     let mut m = market;
-    let mut lo = D::from_raw(10_000); // 1e-5
-    let mut hi = D::from_raw(5 * SCALE); // 500%
-    let mut guess = market.sigma.max(lo).min(hi);
     for _ in 0..MAX_IV_STEPS {
-        m.sigma = guess;
-        // A quote is only known to within its own noise band, so demanding a closer match
-        // than that would be solving a problem the price cannot actually pose.
-        let tolerance = price_noise_band(&m)?.raw().max(IV_PRICE_TOLERANCE_RAW);
-        let diff = european(&m, kind)?.sub(price)?;
-        if diff.abs().raw() <= tolerance {
-            return Ok(guess);
+        if hi.sub(lo)?.raw() <= IV_SIGMA_TOLERANCE_RAW {
+            return lo.add(hi)?.div_int(2);
         }
-        if diff.is_negative() {
-            lo = guess;
+        let mid = lo.add(hi)?.div_int(2)?;
+        m.sigma = mid;
+        if european(&m, kind)?.raw() < price.raw() {
+            lo = mid;
         } else {
-            hi = guess;
+            hi = mid;
         }
-        if hi.sub(lo)?.raw() < IV_SIGMA_TOLERANCE_RAW {
-            return Ok(guess);
-        }
-        let vega = greeks(&m, kind)?.vega;
-        let step = if vega.raw() > 0 { diff.div(vega)? } else { D::ZERO };
-        let next = guess.sub(step)?;
-        guess = if next.raw() > lo.raw() && next.raw() < hi.raw() {
-            next
-        } else {
-            lo.add(hi)?.div_int(2)?
-        };
     }
     Err(NumError::NotConverged)
 }
