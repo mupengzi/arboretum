@@ -177,8 +177,8 @@ export function QuoteTool() {
         />
         <p className="border-t border-line pt-4 text-[13px] leading-relaxed text-muted">
           Rate and carry are fixed at 5% and 1% so the grid stays finite. Volatility is an
-          input here, as it is everywhere else: there is no live implied-volatility surface
-          for tokenised equities to read yet.
+          input: there is no on-chain implied-volatility surface for tokenised equities to
+          read, so the surface would have to arrive as a signed or committed input.
         </p>
       </div>
 
@@ -281,7 +281,7 @@ export function QuoteTool() {
               </code>
               <p className="mt-2 text-[13px] leading-relaxed text-muted">
                 Replay it against any Arbitrum Sepolia RPC with eth_call, or read the same
-                value from a node of your own. Nothing about this number is private to us.
+                value from a node of your own.
               </p>
             </div>
           )}

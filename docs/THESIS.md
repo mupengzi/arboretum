@@ -19,21 +19,27 @@ running it.
 That is the entire intellectual content of the project, and everything below follows
 from taking it seriously.
 
-## Why it was not done before, and why that changed
+## Why the complete version did not exist until now
+
+The individual pieces were demonstrated rather than unknown. Black-Scholes has run inside a
+contract since Lyra v1, and Offchain Labs walked through writing it in Stylus in October
+2024. What follows is why the *finished, deployed, verified* version did not appear, and
+which of those reasons has changed.
 
 1. **Gas.** A 2000-step binomial tree is not affordable in Solidity: no usable fixed-point
    math library, loops priced per iteration, and a stack discipline that fights recursion.
    Rust compiled to WASM through Stylus is where loop-heavy integer arithmetic becomes
-   cheap — Arbitrum's own gas-optimisation documentation puts loop-heavy computation at
-   roughly 50–100× cheaper than the EVM equivalent
-   (<https://docs.arbitrum.io/stylus/best-practices/gas-optimization>).
-2. **Toolchain.** Before Stylus there was no credible path for this class of numerics on
-   an EVM chain.
+   cheap, which Arbitrum's own gas-optimisation documentation puts at roughly 50 to 100
+   times the EVM equivalent.
+   (<https://docs.arbitrum.io/stylus/best-practices/gas-optimization>)
+2. **Toolchain.** Before Stylus there was no credible path for this class of numerics on an
+   EVM chain, which is why the 2024 experiments stopped at European pricing in a decimal
+   library rather than a deployed integer engine.
 3. **Demand.** There was no meaningful pool of tokenised equities to price derivatives on.
-   Stablecoins and perps did not need an equity-volatility engine.
+   Stablecoins and perpetuals did not need an equity-volatility engine.
 
-All three have moved. The third one moved most recently, and it is the one that decides
-whether this is a product or a curiosity.
+The third reason is the one that moved most recently, and it is the one that decides whether
+this is a library or part of a product.
 
 ## Who actually needs it
 
@@ -80,14 +86,24 @@ to allocate unboundedly, and reverts rather than wrapping. The compressed progra
 **4. "Who uses a primitive with no order book? No market maker, no revenue."**
 This is the strongest objection, and the honest answer is that the primitive is not the
 product. The product is the settlement and collateral path that a lending market, a
-structured-note issuer, or a tokenised-equity protocol integrates. A primitive earns
-nothing on its own; it earns by being the thing three other teams depend on.
+structured-note issuer, or a tokenised-equity protocol integrates. A library on its own has
+no users; its value is as a dependency that other contracts call.
 
 ## What is deliberately not claimed
 
-- **Not first.** Lyra's first version ran Black-Scholes in-contract. The claim is that a
-  complete, neutral, reusable pricing layer in Rust/Stylus on Arbitrum did not exist.
+- **Not first, in any of three senses.** Lyra's first version ran Black-Scholes
+  in-contract. Offchain Labs demoed Black-Scholes in Stylus in October 2024. And
+  `chrisco512/black_scholes`, also from October 2024, is a public Stylus repository that
+  prices European options. The claim here is narrower and checkable: the complete set
+  (closed form, Greeks, lattices with early exercise, volatility inversion, a derived
+  uncertainty band), in pure integer arithmetic verified against the compiled artifact,
+  deployed and compared against a local build entry point by entry point.
 - **Not a model suite.** Black-Scholes and CRR, priced carefully. No jumps, no stochastic
   vol, no barriers.
 - **Not an oracle replacement.** The volatility surface is an input; the project is the
   transform, not the data.
+- **Not the only route to verifiable computation.** Brevis, Axiom, RISC Zero, Succinct and
+  Chainlink CRE all carry computation from off-chain back on-chain with proofs, committees or
+  staking. This takes the other route: recompute directly on the L2, with no prover and no
+  additional trust assumption, at the cost of being restricted to deterministic integer
+  algorithms.

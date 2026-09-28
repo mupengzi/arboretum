@@ -142,7 +142,7 @@ export function LatticePanel() {
         {error
           ? `The lattice reads did not complete: ${error}`
           : cells
-            ? `An early-exercise tree at ${steps} steps costs ${rawInt(cells.find((c) => c.label === "American put")!.gas ?? 0n)} gas. The same tree without the exercise check costs ${rawInt(europeanGas ?? 0n)}, and the closed form in the panel above costs 72,442. Arbitrum's own gas documentation puts loop-heavy computation at 50 to 100 times cheaper under Stylus than on the EVM, and that multiple is the difference between a deep lattice being affordable and not.`
+            ? `An early-exercise tree at ${steps} steps costs ${rawInt(cells.find((c) => c.label === "American put")!.gas ?? 0n)} gas. The same tree without the exercise check costs ${rawInt(europeanGas ?? 0n)}, and the closed form in the panel above costs 72,442. Arbitrum's gas documentation gives loop-heavy computation a 50 to 100 times advantage under Stylus over the EVM equivalent.`
             : "Reading the deployed contract."}
       </p>
     </div>

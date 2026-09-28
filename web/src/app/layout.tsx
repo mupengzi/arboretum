@@ -6,9 +6,9 @@ const sans = Geist({ subsets: ["latin"], variable: "--font-geist", display: "swa
 const mono = Geist_Mono({ subsets: ["latin"], variable: "--font-geist-mono", display: "swap" });
 
 export const metadata: Metadata = {
-  title: "Arboretum: an option price you can recompute",
+  title: "Arboretum: option pricing in fixed-point integer arithmetic",
   description:
-    "Deterministic derivatives pricing in Rust on Arbitrum, with no floating point anywhere. The deployed contract and a local build of the same source agree bit for bit.",
+    "Black-Scholes, Greeks, CRR lattices and implied volatility implemented as a Rust contract on Arbitrum Stylus. Integer arithmetic only, no floating point, so a result can be reproduced from the same inputs.",
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

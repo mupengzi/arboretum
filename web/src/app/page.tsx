@@ -114,11 +114,12 @@ export default function Page() {
         <div className="mx-auto grid max-w-[1400px] gap-12 px-5 pb-16 pt-20 sm:px-8 lg:grid-cols-12 lg:gap-16 lg:pb-24 lg:pt-24">
           <div className="min-w-0 lg:col-span-7">
             <h1 className="rise text-4xl font-medium leading-[1.05] tracking-tight text-ink sm:text-5xl lg:text-6xl">
-              An option price you can recompute.
+              Option pricing in fixed-point integer arithmetic.
             </h1>
             <p className="rise rise-1 mt-6 max-w-[52ch] text-base leading-relaxed text-muted">
-              Deterministic derivatives pricing in Rust on Arbitrum. No floating point. The
-              deployed contract and a local build agree bit for bit.
+              Black-Scholes, Greeks, CRR lattices and implied volatility, as a Rust contract
+              on Arbitrum Stylus. Integer arithmetic only, so a result can be reproduced
+              from the same inputs.
             </p>
             <div className="rise rise-2 mt-8 flex flex-wrap items-center gap-3">
               <a
@@ -163,46 +164,48 @@ export default function Page() {
           </div>
         </div>
 
-        <Section id="quote" title="Ask the chain. Then ask your own machine.">
+        <Section id="quote" title="Quote the deployed contract, then compare it with a local build.">
           <QuoteTool />
         </Section>
 
-        <Section id="lattice" title="Early exercise, and what it costs to price it.">
+        <Section id="lattice" title="Lattice pricing: early exercise and what it costs in gas.">
           <LatticePanel />
         </Section>
 
         <section id="why" className="border-t border-line">
           <div className="mx-auto max-w-[1400px] px-5 py-16 sm:px-8 lg:py-20">
             <h2 className="max-w-[24ch] text-2xl font-medium tracking-tight text-ink sm:text-3xl">
-              Why this belongs on-chain, and where it stops belonging.
+              Verifiable computation: method and applicable scope.
             </h2>
             <div className="mt-8 grid gap-8 lg:grid-cols-12">
               <div className="grid max-w-[65ch] gap-5 text-base leading-relaxed text-muted lg:col-span-7">
                 <p>
-                  An option price in DeFi usually arrives as an assertion. A model runs
-                  somewhere off-chain, an oracle delivers the number, and the contract
-                  executes what it was told. The figure that decides a liquidation cannot be
-                  inspected or reproduced by anyone holding the position.
+                  An oracle-supplied price is an off-chain computation delivered as a value.
+                  The contract that consumes it cannot inspect the model, and cannot
+                  reproduce the number from the inputs it holds. Executing the same formula
+                  on-chain replaces that with instructions every node runs identically:
+                  integer arithmetic at a fixed scale, no floating point, overflow checked
+                  and reverted rather than wrapped.
                 </p>
                 <p>
-                  Computing it on-chain changes its kind. Given the same integers, every
-                  validator runs the same integer arithmetic and reaches the same result, so
-                  the price becomes a computation with a proof anyone can re-run. That is
-                  what the MATCH badges above are showing: not that two systems were
-                  configured alike, but that one of them can be checked against the other.
+                  The cost is measurable. A closed-form price costs 72,442 gas here, and a
+                  512-step lattice costs 12.4 million, which is one to two orders of
+                  magnitude above reading a feed. The applicable cases are therefore the
+                  ones where the number is contested or final: settlement and expiry
+                  prices, fallback marks when a feed is stale, collateral valuation, and
+                  reproducible audit. Streaming quotes are outside the scope.
                 </p>
               </div>
               <div className="lg:col-span-5">
                 <div className="rounded-ui border border-line bg-surface p-5">
                   <p className="text-base leading-relaxed text-ink">
-                    Verifiable computation costs one to two orders of magnitude more than
-                    trusting a feed.
+                    Two properties follow from computing rather than consuming the number.
                   </p>
                   <p className="mt-4 text-[13px] leading-relaxed text-muted">
-                    So it is scoped to where the stakes justify it: settlement and expiry
-                    prices, fallback marks when a feed is stale or contested, collateral
-                    valuation, and reproducible audit. It is not a market maker, and it does
-                    not try to be one. Streaming quotes should stay off-chain.
+                    It is reproducible from public inputs, which is what the comparison
+                    panels above measure. And its uncertainty is quantified: the noise band
+                    returned with each price is derived from the published error bound of
+                    the normal CDF approximation, not chosen for convenience.
                   </p>
                 </div>
               </div>
@@ -210,7 +213,7 @@ export default function Page() {
           </div>
         </section>
 
-        <Section id="proof" title="How to check all of this yourself.">
+        <Section id="proof" title="Reproduction: the commands that produce these numbers.">
           <div className="grid gap-px overflow-hidden rounded-ui border border-line bg-line sm:grid-cols-2 lg:grid-cols-5">
             {proof.map((item) => (
               <div key={item.cmd} className="bg-surface p-5">
@@ -243,7 +246,7 @@ export default function Page() {
           </div>
         </Section>
 
-        <Section id="limits" title="What this does not do.">
+        <Section id="limits" title="Limitations.">
           <div className="grid gap-8 sm:grid-cols-2 lg:gap-10">
             {limits.map((l) => (
               <div key={l.title}>
