@@ -13,21 +13,21 @@ export const ACTIVATION_TX = `https://sepolia.arbiscan.io/tx/0xa562c36deb7fd9eeb
 
 export const REPO = "https://github.com/";
 
-/** The browser talks to the chain directly, which is the point: the reviewer's own machine
+/** The browser talks to the chain directly, which is the point: the visitor's own machine
  *  makes the call, no backend of ours is in the path, and no wallet is involved because
  *  every method on this contract is a view.
  *
- *  The fallbacks exist because the public endpoint sits behind a load balancer whose
+ *  Three independent public endpoints sit behind a fallback transport. The official one is
+ *  tried first, and the others exist because it is served through a load balancer whose
  *  backends disagree about CORS headers: some responses carry `access-control-allow-origin`
- *  twice, which a browser rejects even though the value is permissive. The same-origin
- *  route takes over only when the direct call fails, and a second public endpoint sits
- *  behind that. Which path answered does not change any number: every result is compared
- *  against the dataset in src/data/parity.json either way. */
+ *  twice, and a browser rejects that outright even though the value is permissive. Which
+ *  endpoint answers changes no number, because every result is compared against the
+ *  dataset in src/data/parity.json. */
 export const publicClient = createPublicClient({
   transport: fallback([
     http(RPC_URL, { timeout: 20_000, retryCount: 1 }),
-    http("/api/rpc", { timeout: 20_000, retryCount: 1 }),
     http("https://arbitrum-sepolia-rpc.publicnode.com", { timeout: 20_000, retryCount: 1 }),
+    http("https://arbitrum-sepolia.drpc.org", { timeout: 20_000, retryCount: 1 }),
   ]),
 });
 

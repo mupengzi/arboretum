@@ -1,9 +1,10 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  // The page talks to a public Arbitrum Sepolia RPC straight from the browser, so a
-  // reviewer's own machine is what queries the chain. No backend sits in between, and
-  // nothing here needs a wallet.
+  // Static export: the page is entirely client-side apart from rendering, and the host
+  // serves frozen files without running Functions. Every chain read happens in the
+  // visitor's browser, so there is nothing for a server to do.
+  output: "export",
   reactStrictMode: true,
 };
 
