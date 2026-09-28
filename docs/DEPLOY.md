@@ -75,9 +75,10 @@ deployer_address = "0x..."
 ```
 
 `arbcontract` is its own workspace root, so it needs the **workspace** form —
-`crates/arbcontract/Stylus.toml`. The named networks are what make `--network` work
-instead of passing an endpoint every time. A `[contract]` table in that file makes the
-parse fail with `missing field 'networks'`, because it is being read as the other schema.
+`crates/arbcontract/Stylus.toml`. A `[contract]` table in that file makes the parse fail
+with `missing field 'networks'`, because it is being read as the other schema. (Note that
+the named networks have to be *present* to satisfy the schema, but 0.10.9's `check` and
+`deploy` do not actually read them — see the flag note below.)
 
 **3. `rust-toolchain.toml` with a pinned channel.**
 
@@ -102,11 +103,17 @@ cargo stylus check --endpoint https://sepolia-rollup.arbitrum.io/rpc
 ```bash
 export PATH="$PWD/tools/cargo-stylus/bin:$PATH"
 cd crates/arbcontract
-cargo stylus deploy --network arbitrum-sepolia --private-key "$ARB_DEPLOYER_KEY"
+cargo stylus deploy -e https://sepolia-rollup.arbitrum.io/rpc --private-key "$ARB_DEPLOYER_KEY"
 ```
 
 `deploy` builds, checks, deploys and activates in one go, then writes the resulting address
 into `Stylus.toml`.
+
+A note on the flag, because it is easy to guess wrong: `deploy` and `check` take
+`-e/--endpoint`, and in 0.10.9 neither accepts `--network`. The named networks in
+`Stylus.toml` are required by the manifest schema but these two commands do not read them,
+so the endpoint has to be passed explicitly. `--estimate-gas` will price the deployment
+without broadcasting it.
 
 **Keys.** Pass the key through an environment variable as above and never commit it. Use a
 throwaway deployer account holding only testnet ETH. Faucets for Arbitrum Sepolia are in
