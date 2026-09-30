@@ -180,12 +180,25 @@ constraint.
 1. A Stylus program must be **re-activated** every 365 days or after a Stylus upgrade, or
    calls to it start failing. `cargo stylus activate` does it; `stylus-tools` also has a
    `codehash_keepalive` operation for doing it unattended.
-2. **Robinhood Chain testnet has not been verified to run Stylus.** It is an Arbitrum Orbit
-   chain, and Orbit chains only have Stylus if they have taken the upgrade. Confirm before
-   promising a deployment there. Arbitrum Sepolia is confirmed working above.
+2. **Orbit chains only have Stylus if they have taken the upgrade**, so anything other than
+   Arbitrum Sepolia or One has to be confirmed before promising a deployment there. Robinhood
+   Chain testnet was measured here rather than assumed: chain id `46630`, RPC
+   `https://rpc.testnet.chain.robinhood.com`, and `cargo stylus check` against it passes,
+   reporting the same 14,707-byte program and the same project metadata hash as Arbitrum
+   Sepolia and Arbitrum One. Its own developer docs say only "fully EVM-compatible" and never
+   mention Stylus, which is exactly why this needed measuring instead of reading.
 
-## What is still missing
+## What is still open
 
-The frontend and the demo video. `evm/` already holds the Solidity side of that story — a
-consumer contract and its tests — and `scripts/verify_onchain.sh` holds the verification
-demo, so a page has something real to call and something real to show.
+1. **The deployed program was not built through the reproducible path.** It went out with
+   `--no-verify` because the Docker image could not be pulled here, so `cargo stylus verify`
+   cannot re-derive that codehash. The source, `Cargo.lock` and the pinned toolchain are all
+   public, so a rebuild is possible, just not in a container nobody else can pin to.
+2. **The compiled artifact embeds build paths.** Rust writes panic locations into the binary,
+   and Stylus's stripping only removes user custom sections, not those strings, so a program
+   built at `/home/name/project` and one built at `C:\Users\name\Desktop\project` differ.
+   That is why the same source measures a slightly different size on a different machine, and
+   why a codehash is only reproducible from a fixed path. `--remap-path-prefix` removes the
+   local layout from the artifact; the Docker path does it by construction.
+3. **No mainnet deployment, no audit, no external consumer.**
+4. **The signed or Merkle-committed volatility input is designed but not built.**

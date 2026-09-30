@@ -179,6 +179,13 @@ official CLI measures it after `wasm-opt`, which is smaller:
 | `arbcontract` — the contract, every pricing path exposed | 69.5 KB | 18.4 KB | **14,668 bytes** |
 | `arbwasm` — the kernel alone, for attribution | 48.2 KB | 14.6 KB | — |
 
+The `official` column is what `cargo stylus deploy` reported for the program that is actually
+on chain. A fresh `cargo stylus check` on the same source reports **14,707 bytes**, 39 more,
+because the reproducible path appends the project hash as a WASM custom section
+(`add_custom_section(wasm, "project_hash", project_hash)`, applied after `wasm-opt`) and
+those 32 hash bytes do not compress. Both figures are correct; they describe two different
+artifacts. The deployed one is 14,668.
+
 Limit: 96 KB (ArbOS Elara, 2026-08-20), 24 KB before it. Both artifacts fit under the
 pre-Elara limit too, which means the engine is deployable on chains that have not taken
 that upgrade.
@@ -229,6 +236,12 @@ PASS: no floating point anywhere in the module
 The `size` line is the only thing that distinguishes the contract from the 368-byte
 constructor probe that shares its output path, so the script also refuses any module that
 does not export `user_entrypoint`.
+
+That byte count is not a constant, and it is worth knowing why. Rust writes panic locations
+into the binary, and Stylus's stripping only removes user custom sections, so the strings
+survive: this same source measured 71,160 bytes from one checkout path, 71,112 from another,
+and 71,052 with `--remap-path-prefix` applied. What has to hold is that the number is tens of
+kilobytes rather than 368 bytes, and that the float count is zero.
 
 ```
 $ scripts/verify_onchain.sh

@@ -133,6 +133,8 @@ Stylus 限制的是**压缩后**的程序体积。`scripts/size.sh` 量的是这
 | `arbcontract` — 合约，所有定价路径都暴露 | 69.5 KB | 18.4 KB | **14,668 字节** |
 | `arbwasm` — 只有内核，用于归因 | 48.2 KB | 14.6 KB | — |
 
+"官方 CLI"那一列是 `cargo stylus deploy` 对**已经上了链的那个程序**报出来的数。对同一份源码重新跑一次 `cargo stylus check`，报的是 **14,707 字节**，多 39 字节，因为可复现那条路径会把项目哈希作为一个 WASM 自定义段追加进去（源码里是 `add_custom_section(wasm, "project_hash", project_hash)`，加在 `wasm-opt` 之后），而那 32 字节哈希压不掉。两个数都对，它们量的是两个不同的产物。在链上的是 14,668。
+
 上限：96 KB（ArbOS Elara，2026-08-20），此前是 24 KB。两个产物在 Elara 之前的上限下也放得下，这意味着这套引擎可以部署在尚未升级的链上。
 
 ```
@@ -173,6 +175,8 @@ PASS: no floating point anywhere in the module
 ```
 
 那行 `size` 是唯一能把合约和共用同一个输出路径的 368 字节构造函数探针区分开来的东西，所以脚本还会拒绝任何没有导出 `user_entrypoint` 的模块。
+
+这个字节数不是常量，原因值得知道。Rust 会把 panic 位置写进二进制，而 Stylus 的裁剪只去掉用户自定义段，这些字符串留下，所以同一份源码在一个检出路径下量到 71,160 字节，在另一个路径下量到 71,112，加了 `--remap-path-prefix` 之后是 71,052。真正需要成立的是两件事：这个数是几万字节而不是 368 字节，以及浮点计数为零。
 
 ```
 $ scripts/verify_onchain.sh
