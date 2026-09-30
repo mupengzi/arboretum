@@ -81,7 +81,7 @@ large notional is exactly the case where verifiability beats cheapness.
 Both are measured rather than waved away. 3336 reference cases against CPython, with
 derived budgets, live in `docs/ACCURACY.md`. The lattice is capped at 4096 steps, refuses
 to allocate unboundedly, and reverts rather than wrapping. The compressed program is
-14.8 KB against a 96 KB limit.
+14,668 bytes against a 96 KB limit.
 
 **4. "Who uses a primitive with no order book? No market maker, no revenue."**
 This is the strongest objection, and the honest answer is that the primitive is not the

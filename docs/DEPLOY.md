@@ -172,8 +172,9 @@ The CLI also recommends caching the program in ArbOS, which makes calls cheaper:
 cargo stylus cache bid 0x374f469725d735115b8b15dee3f8749ff929d94a 0
 ```
 
-Not done here, because it is another transaction and the cost of calls is not yet the
-constraint.
+Done: `0xd3935e17e61a6354803909f2442fdcadc8f0a36f87d9c676f16b5ba5be0a38bd`, status 1, sent to
+the ArbOS cache manager `0x0C9043D042aB52cFa8d0207459260040Cca54253` with a bid of 0. Read it
+back with `cast tx 0xd3935e17e61a6354803909f2442fdcadc8f0a36f87d9c676f16b5ba5be0a38bd --rpc-url https://arbitrum-sepolia.drpc.org`.
 
 **Two maintenance facts that bite people:**
 
